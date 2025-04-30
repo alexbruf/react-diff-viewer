@@ -190,7 +190,7 @@ class DiffViewer extends React.Component<
 							[this.styles.wordAdded]: wordDiff.type === DiffType.ADDED,
 							[this.styles.wordRemoved]: wordDiff.type === DiffType.REMOVED,
 						})}>
-						{renderer ? renderer(wordDiff.value as string) : wordDiff.value}
+						{renderer ? renderer(wordDiff.value as string) : `${wordDiff.value}`}
 					</span>
 				);
 			},

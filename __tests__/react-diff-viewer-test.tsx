@@ -1,8 +1,11 @@
-import { shallow } from 'enzyme';
+import { shallow, configure } from 'enzyme';
+import Adapter from '@cfaester/enzyme-adapter-react-18';
 import * as React from 'react';
 import * as expect from 'expect';
 
 import DiffViewer from '../lib/index';
+
+configure({ adapter: new Adapter() })
 
 const oldCode = `
 const a = 123
