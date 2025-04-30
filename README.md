@@ -1,4 +1,3 @@
-
 <p align="center">
   <img src='https://i.ibb.co/DKrGhVQ/Frame-1-1.png' width="100%" alt='React Diff Viewer' />
 </p>
@@ -11,6 +10,10 @@
 A simple and beautiful text diff viewer component made with [Diff](https://github.com/kpdecker/jsdiff) and [React](https://reactjs.org).
 
 Inspired from Github diff viewer, it includes features like split view, inline view, word diff, line highlight and more. It is highly customizable and it supports almost all languages.
+
+**React 18/19 Compatible**
+
+This version of `react-diff-viewer` is compatible with React v18 and v19, utilizing functional components and hooks internally.
 
 Check [here](https://github.com/praneshr/react-diff-viewer/tree/v2.0) for v2.0
 
@@ -27,7 +30,7 @@ npm i react-diff-viewer
 ## Usage
 
 ```javascript
-import React, { PureComponent } from 'react';
+import React from 'react';
 import ReactDiffViewer from 'react-diff-viewer';
 
 const oldCode = `
@@ -50,13 +53,13 @@ if(a === 10) {
 }
 `;
 
-class Diff extends PureComponent {
-  render = () => {
-    return (
-      <ReactDiffViewer oldValue={oldCode} newValue={newCode} splitView={true} />
-    );
-  };
-}
+const App = () => {
+  return (
+    <ReactDiffViewer oldValue={oldCode} newValue={newCode} splitView={true} />
+  );
+};
+
+export default App;
 ```
 
 ## Props
@@ -83,7 +86,7 @@ class Diff extends PureComponent {
 
 ## Instance Methods
 
-`resetCodeBlocks()` - Resets the expanded code blocks to it's initial state. Return `true` on successful reset and `false` during unsuccessful reset.
+The `resetCodeBlocks` method is no longer available as an instance method on the functional component. You can manage the expanded state externally using the `expandedBlocks` state and `onBlockExpand` callback if needed.
 
 ## Syntax Highlighting
 
@@ -102,7 +105,7 @@ An example using [Prism JS](https://prismjs.com)
 ```
 
 ```javascript
-import React, { PureComponent } from 'react';
+import React, { useCallback } from 'react';
 import ReactDiffViewer from 'react-diff-viewer';
 
 const oldCode = `
@@ -125,27 +128,32 @@ if(a === 10) {
 }
 `;
 
-class Diff extends PureComponent {
-  highlightSyntax = str => (
-    <pre
-      style={{ display: 'inline' }}
-      dangerouslySetInnerHTML={{
-        __html: Prism.highlight(str, Prism.languages.javascript),
-      }}
+// PrismJS is assumed to be available globally as 'Prism'
+declare var Prism: any;
+
+const App = () => {
+  const highlightSyntax = useCallback((str: string): JSX.Element => {
+    if (!str || !Prism) return <></>;
+    try {
+      const language = Prism.highlight(str, Prism.languages.javascript, 'javascript');
+      return <span dangerouslySetInnerHTML={{ __html: language }} />;
+    } catch (e) {
+      console.error('Prism highlighting failed:', e);
+      return <span>{str}</span>;
+    }
+  }, []);
+
+  return (
+    <ReactDiffViewer
+      oldValue={oldCode}
+      newValue={newCode}
+      splitView={true}
+      renderContent={highlightSyntax}
     />
   );
+};
 
-  render = () => {
-    return (
-      <ReactDiffViewer
-        oldValue={oldCode}
-        newValue={newCode}
-        splitView={true}
-        renderContent={this.highlightSyntax}
-      />
-    );
-  };
-}
+export default App;
 ```
 
 ## Text block diff comparison
@@ -165,7 +173,7 @@ enum DiffMethod {
 ```
 
 ```javascript
-import React, { PureComponent } from 'react';
+import React from 'react';
 import ReactDiffViewer, { DiffMethod } from 'react-diff-viewer';
 
 const oldCode = `
@@ -182,18 +190,18 @@ const newCode = `
 }
 `;
 
-class Diff extends PureComponent {
-  render = () => {
-    return (
-      <ReactDiffViewer
-        oldValue={oldCode}
-        newValue={newCode}
-        compareMethod={DiffMethod.WORDS}
-        splitView={true}
-      />
-    );
-  };
-}
+const App = () => {
+  return (
+    <ReactDiffViewer
+      oldValue={oldCode}
+      newValue={newCode}
+      compareMethod={DiffMethod.WORDS}
+      splitView={true}
+    />
+  );
+};
+
+export default App;
 ```
 
 ## Overriding Styles
@@ -289,7 +297,7 @@ To override any style, just pass the new style object to the `styles` prop. New 
 For keys other than `variables`, the value can either be an object or string interpolation.
 
 ```javascript
-import React, { PureComponent } from 'react';
+import React, { useCallback } from 'react';
 import ReactDiffViewer from 'react-diff-viewer';
 
 const oldCode = `
@@ -312,43 +320,48 @@ if(a === 10) {
 }
 `;
 
-class Diff extends PureComponent {
-  highlightSyntax = str => (
-    <span
-      style={{ display: 'inline' }}
-      dangerouslySetInnerHTML={{
-        __html: Prism.highlight(str, Prism.languages.javascript),
-      }}
+// PrismJS is assumed to be available globally as 'Prism'
+declare var Prism: any;
+
+const App = () => {
+  const highlightSyntax = useCallback((str: string): JSX.Element => {
+    if (!str || !Prism) return <></>;
+    try {
+      const language = Prism.highlight(str, Prism.languages.javascript, 'javascript');
+      return <span dangerouslySetInnerHTML={{ __html: language }} />;
+    } catch (e) {
+      console.error('Prism highlighting failed:', e);
+      return <span>{str}</span>;
+    }
+  }, []);
+
+  const newStyles = {
+    variables: {
+      dark: {
+        highlightBackground: '#fefed5',
+        highlightGutterBackground: '#ffcd3c',
+      },
+    },
+    line: {
+      padding: '10px 2px',
+      '&:hover': {
+        background: '#a26ea1',
+      },
+    },
+  };
+
+  return (
+    <ReactDiffViewer
+      styles={newStyles}
+      oldValue={oldCode}
+      newValue={newCode}
+      splitView={true}
+      renderContent={highlightSyntax}
     />
   );
+};
 
-  render = () => {
-    const newStyles = {
-      variables: {
-        dark: {
-          highlightBackground: '#fefed5',
-          highlightGutterBackground: '#ffcd3c',
-        },
-      },
-      line: {
-        padding: '10px 2px',
-        '&:hover': {
-          background: '#a26ea1',
-        },
-      },
-    };
-
-    return (
-      <ReactDiffViewer
-        styles={newStyles}
-        oldValue={oldCode}
-        newValue={newCode}
-        splitView={true}
-        renderContent={this.highlightSyntax}
-      />
-    );
-  };
-}
+export default App;
 ```
 
 ## Local Development

@@ -8,7 +8,7 @@ import ReactDiff, { DiffMethod } from '../../lib/index';
 const oldJs = require('./diff/javascript/old.rjs').default;
 const newJs = require('./diff/javascript/new.rjs').default;
 
-const logo = require('../../logo.png');
+const logo = require('./image.png');
 
 // PrismJS for syntax highlighting (assuming it's loaded globally or via other means)
 const P = (window as any).Prism;
@@ -56,7 +56,7 @@ const Example: React.FC = () => {
 			<div className="radial"></div>
 			<div className="banner">
 				<div className="img-container">
-					<img src={logo as string} alt="React Diff Viewer Logo" />
+					<img src={logo} alt="React Diff Viewer Logo" />
 				</div>
 				<p>
 					A simple and beautiful text diff viewer made with{' '}
@@ -91,7 +91,7 @@ const Example: React.FC = () => {
 				/>
 			</div>
 			<footer>
-				Made with 💓 by{' '}
+				Forked from {' '}
 				<a href="https://praneshravi.in" target="_blank" rel="noopener noreferrer">
 					Pranesh Ravi
 				</a>
