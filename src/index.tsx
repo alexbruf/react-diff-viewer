@@ -1,5 +1,5 @@
 import * as React from 'react';
-import * as PropTypes from 'prop-types';
+import { useState, useMemo, useCallback } from 'react';
 import cn from 'classnames';
 
 import {
@@ -13,11 +13,6 @@ import computeStyles, {
 	ReactDiffViewerStylesOverride,
 	ReactDiffViewerStyles,
 } from './styles';
-
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const m = require('memoize-one');
-
-const memoize = m.default || m;
 
 export enum LineNumberPrefix {
 	LEFT = 'L',
@@ -44,7 +39,7 @@ export interface ReactDiffViewerProps {
 	// Show only diff between the two values.
 	showDiffOnly?: boolean;
 	// Render prop to format final string before displaying them in the UI.
-	renderContent?: (source: string) => JSX.Element;
+	renderContent?: (source: string) => JSX.Element | undefined | null;
 	// Render prop to format code fold message.
 	codeFoldMessageRenderer?: (
 		totalFoldedLines: number,
@@ -68,414 +63,347 @@ export interface ReactDiffViewerProps {
 	rightTitle?: string | JSX.Element;
 }
 
-export interface ReactDiffViewerState {
-	// Array holding the expanded code folding.
-	expandedBlocks?: number[];
-}
+// Default props added to the function component definition
+const DiffViewer: React.FC<ReactDiffViewerProps> = ({
+	oldValue,
+	newValue,
+	splitView = true,
+	linesOffset = 0,
+	disableWordDiff = false,
+	compareMethod = DiffMethod.CHARS,
+	extraLinesSurroundingDiff = 3,
+	hideLineNumbers = false,
+	showDiffOnly = true,
+	renderContent,
+	codeFoldMessageRenderer,
+	onLineNumberClick,
+	highlightLines = [],
+	styles: stylesOverride = {},
+	useDarkTheme = false,
+	leftTitle,
+	rightTitle,
+}) => {
+	// Use useState for managing expanded blocks
+	const [expandedBlocks, setExpandedBlocks] = useState<number[]>([]);
 
-class DiffViewer extends React.Component<
-	ReactDiffViewerProps,
-	ReactDiffViewerState
-> {
-	private styles: ReactDiffViewerStyles;
+	// Use useMemo for computing styles
+	const styles: ReactDiffViewerStyles = useMemo(
+		() => computeStyles(stylesOverride, useDarkTheme),
+		[stylesOverride, useDarkTheme],
+	);
 
-	public static defaultProps: ReactDiffViewerProps = {
-		oldValue: '',
-		newValue: '',
-		splitView: true,
-		highlightLines: [],
-		disableWordDiff: false,
-		compareMethod: DiffMethod.CHARS,
-		styles: {},
-		hideLineNumbers: false,
-		extraLinesSurroundingDiff: 3,
-		showDiffOnly: true,
-		useDarkTheme: false,
-		linesOffset: 0,
-	};
+	// Use useCallback for expanding blocks
+	const onBlockExpand = useCallback(
+		(id: number): void => {
+			setExpandedBlocks((prevState) => [...prevState, id]);
+		},
+		[setExpandedBlocks], // Dependency array includes setExpandedBlocks
+	);
 
-	public static propTypes = {
-		oldValue: PropTypes.string.isRequired,
-		newValue: PropTypes.string.isRequired,
-		splitView: PropTypes.bool,
-		disableWordDiff: PropTypes.bool,
-		compareMethod: PropTypes.oneOf(Object.values(DiffMethod)),
-		renderContent: PropTypes.func,
-		onLineNumberClick: PropTypes.func,
-		extraLinesSurroundingDiff: PropTypes.number,
-		styles: PropTypes.object,
-		hideLineNumbers: PropTypes.bool,
-		showDiffOnly: PropTypes.bool,
-		highlightLines: PropTypes.arrayOf(PropTypes.string),
-		leftTitle: PropTypes.oneOfType([PropTypes.string, PropTypes.element]),
-		rightTitle: PropTypes.oneOfType([PropTypes.string, PropTypes.element]),
-		linesOffset: PropTypes.number,
-	};
+	// Use useCallback for line number click handler
+	const onLineNumberClickProxy = useCallback(
+		(id: string) => (e: React.MouseEvent<HTMLTableCellElement>): void => {
+			if (onLineNumberClick) {
+				onLineNumberClick(id, e);
+			}
+		},
+		[onLineNumberClick], // Dependency array includes onLineNumberClick
+	);
 
-	public constructor(props: ReactDiffViewerProps) {
-		super(props);
+	// Use useCallback for rendering word diffs
+	const renderWordDiff = useCallback(
+		(
+			diffArray: DiffInformation[],
+			renderer?: (chunk: string) => JSX.Element,
+		): JSX.Element[] => {
+			return diffArray.map(
+				(wordDiff, i): JSX.Element => {
+					return (
+						<span
+							key={i}
+							className={cn(styles.wordDiff, {
+								[styles.wordAdded]: wordDiff.type === DiffType.ADDED,
+								[styles.wordRemoved]: wordDiff.type === DiffType.REMOVED,
+							})}>
+							{/* Use renderer if provided, otherwise render the value directly */}
+							{renderer ? renderer(wordDiff.value as string) : `${wordDiff.value}`}
+						</span>
+					);
+				},
+			);
+		},
+		[styles.wordDiff, styles.wordAdded, styles.wordRemoved], // Dependency array includes styles
+	);
 
-		this.state = {
-			expandedBlocks: [],
-		};
-	}
+	// Use useCallback for rendering a single line
+	const renderLine = useCallback(
+		(
+			lineNumber: number | null, // Allow null for placeholder lines
+			type: DiffType,
+			prefix: LineNumberPrefix,
+			value: string | DiffInformation[],
+			additionalLineNumber?: number | null, // Allow null
+			additionalPrefix?: LineNumberPrefix,
+		): JSX.Element => {
+			const lineNumberTemplate = `${prefix}-${lineNumber}`;
+			const additionalLineNumberTemplate = `${additionalPrefix}-${additionalLineNumber}`;
+			const highlightLine =
+				(lineNumber !== null && highlightLines.includes(lineNumberTemplate)) ||
+				(additionalLineNumber !== null && highlightLines.includes(additionalLineNumberTemplate));
+			const added = type === DiffType.ADDED;
+			const removed = type === DiffType.REMOVED;
+			let content;
+			if (Array.isArray(value)) {
+				content = renderWordDiff(value, renderContent);
+			} else if (renderContent) {
+				content = renderContent(value);
+			} else {
+				content = value;
+			}
+			content = content ?? <></>;
 
-	/**
-	 * Resets code block expand to the initial stage. Will be exposed to the parent component via
-	 * refs.
-	 */
-	public resetCodeBlocks = (): boolean => {
-		if (this.state.expandedBlocks.length > 0) {
-			this.setState({
-				expandedBlocks: [],
-			});
-			return true;
-		}
-		return false;
-	};
+			return (
+				<React.Fragment>
+					{!hideLineNumbers && (
+						<td
+							onClick={
+								lineNumber !== null
+									? onLineNumberClickProxy(lineNumberTemplate)
+									: undefined
+							}
+							className={cn(styles.gutter, {
+								[styles.emptyGutter]: !lineNumber,
+								[styles.diffAdded]: added,
+								[styles.diffRemoved]: removed,
+								[styles.highlightedGutter]: highlightLine,
+							})}>
+							<pre className={styles.lineNumber}>{lineNumber}</pre>
+						</td>
+					)}
+					{!splitView && !hideLineNumbers && (
+						<td
+							onClick={
+								additionalLineNumber !== null
+									? onLineNumberClickProxy(additionalLineNumberTemplate)
+									: undefined
+							}
+							className={cn(styles.gutter, {
+								[styles.emptyGutter]: !additionalLineNumber,
+								[styles.diffAdded]: added,
+								[styles.diffRemoved]: removed,
+								[styles.highlightedGutter]: highlightLine,
+							})}>
+							<pre className={styles.lineNumber}>{additionalLineNumber}</pre>
+						</td>
+					)}
+					<td
+						className={cn(styles.marker, {
+							[styles.emptyLine]: !content,
+							[styles.diffAdded]: added,
+							[styles.diffRemoved]: removed,
+							[styles.highlightedLine]: highlightLine,
+						})}>
+						<pre>
+							{added && '+'}
+							{removed && '-'}
+						</pre>
+					</td>
+					<td
+						className={cn(styles.content, {
+							[styles.emptyLine]: !content,
+							[styles.diffAdded]: added,
+							[styles.diffRemoved]: removed,
+							[styles.highlightedLine]: highlightLine,
+						})}>
+						<pre className={styles.contentText}>{content}</pre>
+					</td>
+				</React.Fragment>
+			);
+		},
+		[
+			hideLineNumbers,
+			splitView,
+			highlightLines,
+			renderWordDiff,
+			renderContent,
+			onLineNumberClickProxy,
+			styles.gutter,
+			styles.emptyGutter,
+			styles.diffAdded,
+			styles.diffRemoved,
+			styles.highlightedGutter,
+			styles.lineNumber,
+			styles.marker,
+			styles.emptyLine,
+			styles.highlightedLine,
+			styles.content,
+			styles.contentText,
+		], // Extensive dependency array for renderLine
+	);
 
-	/**
-	 * Pushes the target expanded code block to the state. During the re-render,
-	 * this value is used to expand/fold unmodified code.
-	 */
-	private onBlockExpand = (id: number): void => {
-		const prevState = this.state.expandedBlocks.slice();
-		prevState.push(id);
+	// Use useCallback for rendering split view lines
+	const renderSplitView = useCallback(
+		({ left, right }: LineInformation, index: number): JSX.Element => {
+			return (
+				<tr key={index} className={styles.line}>
+					{renderLine(
+						left.lineNumber,
+						left.type,
+						LineNumberPrefix.LEFT,
+						left.value,
+					)}
+					{renderLine(
+						right.lineNumber,
+						right.type,
+						LineNumberPrefix.RIGHT,
+						right.value,
+					)}
+				</tr>
+			);
+		},
+		[renderLine, styles.line], // Dependency array includes renderLine and styles.line
+	);
 
-		this.setState({
-			expandedBlocks: prevState,
-		});
-	};
-
-	/**
-	 * Computes final styles for the diff viewer. It combines the default styles with the user
-	 * supplied overrides. The computed styles are cached with performance in mind.
-	 *
-	 * @param styles User supplied style overrides.
-	 */
-	private computeStyles: (
-		styles: ReactDiffViewerStylesOverride,
-		useDarkTheme: boolean,
-	) => ReactDiffViewerStyles = memoize(computeStyles);
-
-	/**
-	 * Returns a function with clicked line number in the closure. Returns an no-op function when no
-	 * onLineNumberClick handler is supplied.
-	 *
-	 * @param id Line id of a line.
-	 */
-	private onLineNumberClickProxy = (id: string): any => {
-		if (this.props.onLineNumberClick) {
-			return (e: any): void => this.props.onLineNumberClick(id, e);
-		}
-		return (): void => {};
-	};
-
-	/**
-	 * Maps over the word diff and constructs the required React elements to show word diff.
-	 *
-	 * @param diffArray Word diff information derived from line information.
-	 * @param renderer Optional renderer to format diff words. Useful for syntax highlighting.
-	 */
-	private renderWordDiff = (
-		diffArray: DiffInformation[],
-		renderer?: (chunk: string) => JSX.Element,
-	): JSX.Element[] => {
-		return diffArray.map(
-			(wordDiff, i): JSX.Element => {
+	// Use useCallback for rendering inline view lines
+	const renderInlineView = useCallback(
+		({ left, right }: LineInformation, index: number): JSX.Element => {
+			let content;
+			if (left.type === DiffType.REMOVED && right.type === DiffType.ADDED) {
 				return (
-					<span
-						key={i}
-						className={cn(this.styles.wordDiff, {
-							[this.styles.wordAdded]: wordDiff.type === DiffType.ADDED,
-							[this.styles.wordRemoved]: wordDiff.type === DiffType.REMOVED,
-						})}>
-						{renderer ? renderer(wordDiff.value as string) : `${wordDiff.value}`}
-					</span>
+					<React.Fragment key={index}>
+						<tr className={styles.line}>
+							{renderLine(
+								left.lineNumber,
+								left.type,
+								LineNumberPrefix.LEFT,
+								left.value,
+								null, // No additional line number for removed line
+							)}
+						</tr>
+						<tr className={styles.line}>
+							{renderLine(
+								null, // No line number for added line gutter
+								right.type,
+								LineNumberPrefix.RIGHT,
+								right.value,
+								right.lineNumber, // Use right line number as additional
+							)}
+						</tr>
+					</React.Fragment>
 				);
-			},
-		);
-	};
-
-	/**
-	 * Maps over the line diff and constructs the required react elements to show line diff. It calls
-	 * renderWordDiff when encountering word diff. This takes care of both inline and split view line
-	 * renders.
-	 *
-	 * @param lineNumber Line number of the current line.
-	 * @param type Type of diff of the current line.
-	 * @param prefix Unique id to prefix with the line numbers.
-	 * @param value Content of the line. It can be a string or a word diff array.
-	 * @param additionalLineNumber Additional line number to be shown. Useful for rendering inline
-	 *  diff view. Right line number will be passed as additionalLineNumber.
-	 * @param additionalPrefix Similar to prefix but for additional line number.
-	 */
-	private renderLine = (
-		lineNumber: number,
-		type: DiffType,
-		prefix: LineNumberPrefix,
-		value: string | DiffInformation[],
-		additionalLineNumber?: number,
-		additionalPrefix?: LineNumberPrefix,
-	): JSX.Element => {
-		const lineNumberTemplate = `${prefix}-${lineNumber}`;
-		const additionalLineNumberTemplate = `${additionalPrefix}-${additionalLineNumber}`;
-		const highlightLine =
-			this.props.highlightLines.includes(lineNumberTemplate) ||
-			this.props.highlightLines.includes(additionalLineNumberTemplate);
-		const added = type === DiffType.ADDED;
-		const removed = type === DiffType.REMOVED;
-		let content;
-		if (Array.isArray(value)) {
-			content = this.renderWordDiff(value, this.props.renderContent);
-		} else if (this.props.renderContent) {
-			content = this.props.renderContent(value);
-		} else {
-			content = value;
-		}
-
-		return (
-			<React.Fragment>
-				{!this.props.hideLineNumbers && (
-					<td
-						onClick={
-							lineNumber && this.onLineNumberClickProxy(lineNumberTemplate)
-						}
-						className={cn(this.styles.gutter, {
-							[this.styles.emptyGutter]: !lineNumber,
-							[this.styles.diffAdded]: added,
-							[this.styles.diffRemoved]: removed,
-							[this.styles.highlightedGutter]: highlightLine,
-						})}>
-						<pre className={this.styles.lineNumber}>{lineNumber}</pre>
-					</td>
-				)}
-				{!this.props.splitView && !this.props.hideLineNumbers && (
-					<td
-						onClick={
-							additionalLineNumber &&
-							this.onLineNumberClickProxy(additionalLineNumberTemplate)
-						}
-						className={cn(this.styles.gutter, {
-							[this.styles.emptyGutter]: !additionalLineNumber,
-							[this.styles.diffAdded]: added,
-							[this.styles.diffRemoved]: removed,
-							[this.styles.highlightedGutter]: highlightLine,
-						})}>
-						<pre className={this.styles.lineNumber}>{additionalLineNumber}</pre>
-					</td>
-				)}
-				<td
-					className={cn(this.styles.marker, {
-						[this.styles.emptyLine]: !content,
-						[this.styles.diffAdded]: added,
-						[this.styles.diffRemoved]: removed,
-						[this.styles.highlightedLine]: highlightLine,
-					})}>
-					<pre>
-						{added && '+'}
-						{removed && '-'}
-					</pre>
-				</td>
-				<td
-					className={cn(this.styles.content, {
-						[this.styles.emptyLine]: !content,
-						[this.styles.diffAdded]: added,
-						[this.styles.diffRemoved]: removed,
-						[this.styles.highlightedLine]: highlightLine,
-					})}>
-					<pre className={this.styles.contentText}>{content}</pre>
-				</td>
-			</React.Fragment>
-		);
-	};
-
-	/**
-	 * Generates lines for split view.
-	 *
-	 * @param obj Line diff information.
-	 * @param obj.left Life diff information for the left pane of the split view.
-	 * @param obj.right Life diff information for the right pane of the split view.
-	 * @param index React key for the lines.
-	 */
-	private renderSplitView = (
-		{ left, right }: LineInformation,
-		index: number,
-	): JSX.Element => {
-		return (
-			<tr key={index} className={this.styles.line}>
-				{this.renderLine(
+			}
+			if (left.type === DiffType.REMOVED) {
+				content = renderLine(
 					left.lineNumber,
 					left.type,
 					LineNumberPrefix.LEFT,
 					left.value,
-				)}
-				{this.renderLine(
-					right.lineNumber,
+					null, // No additional line number
+				);
+			}
+			if (left.type === DiffType.DEFAULT) {
+				content = renderLine(
+					left.lineNumber,
+					left.type,
+					LineNumberPrefix.LEFT,
+					left.value,
+					right.lineNumber, // Add right line number as additional
+					LineNumberPrefix.RIGHT,
+				);
+			}
+			if (right.type === DiffType.ADDED) {
+				content = renderLine(
+					null, // No line number for added line gutter
 					right.type,
 					LineNumberPrefix.RIGHT,
 					right.value,
-				)}
-			</tr>
-		);
-	};
+					right.lineNumber, // Use right line number as additional
+				);
+			}
 
-	/**
-	 * Generates lines for inline view.
-	 *
-	 * @param obj Line diff information.
-	 * @param obj.left Life diff information for the added section of the inline view.
-	 * @param obj.right Life diff information for the removed section of the inline view.
-	 * @param index React key for the lines.
-	 */
-	public renderInlineView = (
-		{ left, right }: LineInformation,
-		index: number,
-	): JSX.Element => {
-		let content;
-		if (left.type === DiffType.REMOVED && right.type === DiffType.ADDED) {
 			return (
-				<React.Fragment key={index}>
-					<tr className={this.styles.line}>
-						{this.renderLine(
-							left.lineNumber,
-							left.type,
-							LineNumberPrefix.LEFT,
-							left.value,
-							null,
-						)}
-					</tr>
-					<tr className={this.styles.line}>
-						{this.renderLine(
-							null,
-							right.type,
-							LineNumberPrefix.RIGHT,
-							right.value,
-							right.lineNumber,
-						)}
-					</tr>
-				</React.Fragment>
+				<tr key={index} className={styles.line}>
+					{content}
+				</tr>
 			);
-		}
-		if (left.type === DiffType.REMOVED) {
-			content = this.renderLine(
-				left.lineNumber,
-				left.type,
-				LineNumberPrefix.LEFT,
-				left.value,
-				null,
+		},
+		[renderLine, styles.line], // Dependency array includes renderLine and styles.line
+	);
+
+	// Use useCallback for the block click proxy
+	const onBlockClickProxy = useCallback(
+		(id: number) => (): void => onBlockExpand(id),
+		[onBlockExpand], // Dependency array includes onBlockExpand
+	);
+
+	// Use useCallback for rendering the skipped line indicator
+	const renderSkippedLineIndicator = useCallback(
+		(
+			num: number,
+			blockNumber: number,
+			leftBlockLineNumber: number,
+			rightBlockLineNumber: number,
+		): JSX.Element => {
+			const message = codeFoldMessageRenderer ? (
+				codeFoldMessageRenderer(
+					num,
+					leftBlockLineNumber,
+					rightBlockLineNumber,
+				)
+			) : (
+				<pre className={styles.codeFoldContent}>Expand {num} lines ...</pre>
 			);
-		}
-		if (left.type === DiffType.DEFAULT) {
-			content = this.renderLine(
-				left.lineNumber,
-				left.type,
-				LineNumberPrefix.LEFT,
-				left.value,
-				right.lineNumber,
-				LineNumberPrefix.RIGHT,
+			const content = (
+				<td>
+					<a onClick={onBlockClickProxy(blockNumber)} tabIndex={0}>
+						{message}
+					</a>
+				</td>
 			);
-		}
-		if (right.type === DiffType.ADDED) {
-			content = this.renderLine(
-				null,
-				right.type,
-				LineNumberPrefix.RIGHT,
-				right.value,
-				right.lineNumber,
+			const isUnifiedViewWithoutLineNumbers = !splitView && !hideLineNumbers;
+			return (
+				<tr
+					key={`${leftBlockLineNumber}-${rightBlockLineNumber}`}
+					className={styles.codeFold}>
+					{!hideLineNumbers && <td className={styles.codeFoldGutter} />}
+					<td
+						className={cn({
+							[styles.codeFoldGutter]: isUnifiedViewWithoutLineNumbers,
+						})}
+					/>
+
+					{/* Swap columns only for unified view without line numbers */}
+					{isUnifiedViewWithoutLineNumbers ? (
+						<React.Fragment>
+							<td />
+							{content}
+						</React.Fragment>
+					) : (
+						<React.Fragment>
+							{content}
+							<td />
+						</React.Fragment>
+					)}
+
+					<td />
+					<td />
+				</tr>
 			);
-		}
-
-		return (
-			<tr key={index} className={this.styles.line}>
-				{content}
-			</tr>
-		);
-	};
-
-	/**
-	 * Returns a function with clicked block number in the closure.
-	 *
-	 * @param id Cold fold block id.
-	 */
-	private onBlockClickProxy = (id: number): any => (): void =>
-		this.onBlockExpand(id);
-
-	/**
-	 * Generates cold fold block. It also uses the custom message renderer when available to show
-	 * cold fold messages.
-	 *
-	 * @param num Number of skipped lines between two blocks.
-	 * @param blockNumber Code fold block id.
-	 * @param leftBlockLineNumber First left line number after the current code fold block.
-	 * @param rightBlockLineNumber First right line number after the current code fold block.
-	 */
-	private renderSkippedLineIndicator = (
-		num: number,
-		blockNumber: number,
-		leftBlockLineNumber: number,
-		rightBlockLineNumber: number,
-	): JSX.Element => {
-		const { hideLineNumbers, splitView } = this.props;
-		const message = this.props.codeFoldMessageRenderer ? (
-			this.props.codeFoldMessageRenderer(
-				num,
-				leftBlockLineNumber,
-				rightBlockLineNumber,
-			)
-		) : (
-			<pre className={this.styles.codeFoldContent}>Expand {num} lines ...</pre>
-		);
-		const content = (
-			<td>
-				<a onClick={this.onBlockClickProxy(blockNumber)} tabIndex={0}>
-					{message}
-				</a>
-			</td>
-		);
-		const isUnifiedViewWithoutLineNumbers = !splitView && !hideLineNumbers;
-		return (
-			<tr
-				key={`${leftBlockLineNumber}-${rightBlockLineNumber}`}
-				className={this.styles.codeFold}>
-				{!hideLineNumbers && <td className={this.styles.codeFoldGutter} />}
-				<td
-					className={cn({
-						[this.styles.codeFoldGutter]: isUnifiedViewWithoutLineNumbers,
-					})}
-				/>
-
-				{/* Swap columns only for unified view without line numbers */}
-				{isUnifiedViewWithoutLineNumbers ? (
-					<React.Fragment>
-						<td />
-						{content}
-					</React.Fragment>
-				) : (
-					<React.Fragment>
-						{content}
-						<td />
-					</React.Fragment>
-				)}
-
-				<td />
-				<td />
-			</tr>
-		);
-	};
-
-	/**
-	 * Generates the entire diff view.
-	 */
-	private renderDiff = (): JSX.Element[] => {
-		const {
-			oldValue,
-			newValue,
+		},
+		[
+			hideLineNumbers,
 			splitView,
-			disableWordDiff,
-			compareMethod,
-			linesOffset,
-		} = this.props;
+			codeFoldMessageRenderer,
+			onBlockClickProxy,
+			styles.codeFoldContent,
+			styles.codeFold,
+			styles.codeFoldGutter,
+		], // Dependency array
+	);
+
+	// Use useCallback for rendering the main diff view
+	const renderDiff = useCallback((): (JSX.Element | null)[] => {
+		// Compute line info inside useCallback to ensure it uses the latest props
 		const { lineInformation, diffLines } = computeLineInformation(
 			oldValue,
 			newValue,
@@ -483,111 +411,130 @@ class DiffViewer extends React.Component<
 			compareMethod,
 			linesOffset,
 		);
-		const extraLines =
-			this.props.extraLinesSurroundingDiff < 0
-				? 0
-				: this.props.extraLinesSurroundingDiff;
+		// Clone diffLines to avoid modifying the original array during processing
+		const remainingDiffLines = [...diffLines];
+		const validExtraLines = extraLinesSurroundingDiff < 0 ? 0 : extraLinesSurroundingDiff;
 		let skippedLines: number[] = [];
+
 		return lineInformation.map(
-			(line: LineInformation, i: number): JSX.Element => {
-				const diffBlockStart = diffLines[0];
-				const currentPosition = diffBlockStart - i;
-				if (this.props.showDiffOnly) {
-					if (currentPosition === -extraLines) {
-						skippedLines = [];
-						diffLines.shift();
-					}
-					if (
+			(line: LineInformation, i: number): JSX.Element | null => {
+				const currentDiffBlockStart = remainingDiffLines[0];
+				const currentPosition = currentDiffBlockStart - i;
+
+				if (showDiffOnly) {
+					// Check if the current line is a default line and should be skipped
+					const isSkipped =
 						line.left.type === DiffType.DEFAULT &&
-						(currentPosition > extraLines ||
-							typeof diffBlockStart === 'undefined') &&
-						!this.state.expandedBlocks.includes(diffBlockStart)
-					) {
-						skippedLines.push(i + 1);
-						if (i === lineInformation.length - 1 && skippedLines.length > 1) {
-							return this.renderSkippedLineIndicator(
-								skippedLines.length,
-								diffBlockStart,
-								line.left.lineNumber,
-								line.right.lineNumber,
+						(currentPosition > validExtraLines || typeof currentDiffBlockStart === 'undefined') &&
+						!expandedBlocks.includes(currentDiffBlockStart); // Check if the block is collapsed
+
+					if (isSkipped) {
+						skippedLines.push(i); // Store index
+
+						// If it's the last line and we have skipped lines, render the indicator
+						if (i === lineInformation.length - 1 && skippedLines.length > 0) {
+							const firstSkippedIndex = skippedLines[0];
+							const numSkipped = skippedLines.length;
+							const leftNum = lineInformation[firstSkippedIndex].left.lineNumber;
+							const rightNum = lineInformation[firstSkippedIndex].right.lineNumber;
+							skippedLines = []; // Reset
+							return renderSkippedLineIndicator(
+								numSkipped,
+								currentDiffBlockStart, // Use the block ID
+								leftNum,
+								rightNum,
 							);
 						}
+						// Otherwise, continue skipping
 						return null;
+					} else {
+						// If the current line is not skipped and the previous line was skipped, render the indicator
+						if (skippedLines.length > 0) {
+							const firstSkippedIndex = skippedLines[0];
+							const numSkipped = skippedLines.length;
+							const leftNum = lineInformation[firstSkippedIndex].left.lineNumber;
+							const rightNum = lineInformation[firstSkippedIndex].right.lineNumber;
+							skippedLines = []; // Reset
+
+							const indicator = renderSkippedLineIndicator(
+								numSkipped,
+								currentDiffBlockStart, // Use the block ID
+								leftNum,
+								rightNum,
+							);
+
+							// Render the current line after the indicator
+							const nodes = splitView
+								? renderSplitView(line, i)
+								: renderInlineView(line, i);
+
+							return (
+								<React.Fragment key={i}>
+									{indicator}
+									{nodes}
+								</React.Fragment>
+							);
+						}
+					}
+
+					// Shift to the next diff block when necessary
+					if (currentPosition === -validExtraLines) {
+						remainingDiffLines.shift();
 					}
 				}
 
-				const diffNodes = splitView
-					? this.renderSplitView(line, i)
-					: this.renderInlineView(line, i);
-
-				if (currentPosition === extraLines && skippedLines.length > 0) {
-					const { length } = skippedLines;
-					skippedLines = [];
-					return (
-						<React.Fragment key={i}>
-							{this.renderSkippedLineIndicator(
-								length,
-								diffBlockStart,
-								line.left.lineNumber,
-								line.right.lineNumber,
-							)}
-							{diffNodes}
-						</React.Fragment>
-					);
-				}
-				return diffNodes;
+				// Render the current line normally if not skipping
+				return splitView
+					? renderSplitView(line, i)
+					: renderInlineView(line, i);
 			},
 		);
-	};
+	}, [
+		oldValue,
+		newValue,
+		splitView,
+		disableWordDiff,
+		compareMethod,
+		linesOffset,
+		extraLinesSurroundingDiff,
+		showDiffOnly,
+		expandedBlocks, // Include expandedBlocks in dependencies
+		renderSkippedLineIndicator,
+		renderSplitView,
+		renderInlineView,
+	]);
 
-	public render = (): JSX.Element => {
-		const {
-			oldValue,
-			newValue,
-			useDarkTheme,
-			leftTitle,
-			rightTitle,
-			splitView,
-			hideLineNumbers,
-		} = this.props;
-
-		if (typeof oldValue !== 'string' || typeof newValue !== 'string') {
-			throw Error('"oldValue" and "newValue" should be strings');
-		}
-
-		this.styles = this.computeStyles(this.props.styles, useDarkTheme);
-		const nodes = this.renderDiff();
-		const colSpanOnSplitView = hideLineNumbers ? 2 : 3;
-		const colSpanOnInlineView = hideLineNumbers ? 2 : 4;
-
-		const title = (leftTitle || rightTitle) && (
-			<tr>
-				<td
-					colSpan={splitView ? colSpanOnSplitView : colSpanOnInlineView}
-					className={this.styles.titleBlock}>
-					<pre className={this.styles.contentText}>{leftTitle}</pre>
+	// Compute title and colSpans based on props
+	const colSpanOnSplitView = hideLineNumbers ? 2 : 3;
+	const colSpanOnInlineView = hideLineNumbers ? 2 : 4;
+	const title = (leftTitle || rightTitle) && (
+		<tr>
+			<td
+				colSpan={splitView ? colSpanOnSplitView : colSpanOnInlineView}
+				className={styles.titleBlock}>
+				<pre className={styles.contentText}>{leftTitle}</pre>
+			</td>
+			{splitView && (
+				<td colSpan={colSpanOnSplitView} className={styles.titleBlock}>
+					<pre className={styles.contentText}>{rightTitle}</pre>
 				</td>
-				{splitView && (
-					<td colSpan={colSpanOnSplitView} className={this.styles.titleBlock}>
-						<pre className={this.styles.contentText}>{rightTitle}</pre>
-					</td>
-				)}
-			</tr>
-		);
+			)}
+		</tr>
+	);
 
-		return (
-			<table
-				className={cn(this.styles.diffContainer, {
-					[this.styles.splitView]: splitView,
-				})}>
-				<tbody>
-					{title}
-					{nodes}
-				</tbody>
-			</table>
-		);
-	};
-}
+	return (
+		<table
+			className={cn(styles.diffContainer, {
+				[styles.splitView]: splitView,
+			})}>
+			<tbody>
+				{title}
+				{renderDiff()}
+			</tbody>
+		</table>
+	);
+};
 
+// Export the component and types
 export default DiffViewer;
 export { ReactDiffViewerStylesOverride, DiffMethod };

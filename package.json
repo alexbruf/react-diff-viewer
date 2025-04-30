@@ -1,6 +1,6 @@
 {
 	"name": "react-diff-viewer",
-	"version": "3.1.1",
+	"version": "3.1.2",
 	"private": false,
 	"description": "A simple and beautiful text diff viewer component made with diff and React",
 	"keywords": [
@@ -13,16 +13,11 @@
 		"react-component",
 		"ui"
 	],
-	"repository": "git@github.com:praneshr/react-diff-viewer.git",
+	"repository": "git@github.com:alexbruf/react-diff-viewer.git",
 	"license": "MIT",
-	"author": "Pranesh Ravi<praneshpranesh@gmail.com>",
+	"author": "Alex Brufsky <alex@brufsky.org>",
 	"main": "lib/index",
 	"typings": "lib/index",
-	"overrides": {
-		"enzyme": {
-			"cheerio": "1.0.0.rc-3"
-		}
-	},
 	"scripts": {
 		"build": "tsc --outDir lib/",
 		"build:examples": "webpack --progress --colors",
