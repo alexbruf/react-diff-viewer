@@ -3,9 +3,8 @@
 </p>
 <br/>
 
-[![Build Status](https://travis-ci.com/praneshr/react-diff-viewer.svg?branch=master)](https://travis-ci.com/praneshr/react-diff-viewer)
-[![npm version](https://badge.fury.io/js/react-diff-viewer.svg)](https://badge.fury.io/js/react-diff-viewer)
-[![GitHub license](https://img.shields.io/github/license/praneshr/react-diff-viewer.svg)](https://github.com/praneshr/react-diff-viewer/blob/master/LICENSE)
+[![npm version](https://badge.fury.io/js/@alexbruf%2Freact-diff-viewer.svg)](https://badge.fury.io/js/@alexbruf%2Freact-diff-viewer)
+[![GitHub license](https://img.shields.io/github/license/praneshr/react-diff-viewer.svg)](https://github.com/alexbruf/react-diff-viewer/blob/master/LICENSE)
 
 A simple and beautiful text diff viewer component made with [Diff](https://github.com/kpdecker/jsdiff) and [React](https://reactjs.org).
 
@@ -13,25 +12,23 @@ Inspired from Github diff viewer, it includes features like split view, inline v
 
 **React 18/19 Compatible**
 
-This version of `react-diff-viewer` is compatible with React v18 and v19, utilizing functional components and hooks internally.
-
-Check [here](https://github.com/praneshr/react-diff-viewer/tree/v2.0) for v2.0
+This version of `@alexbruf/react-diff-viewer` is compatible with React v18 and v19, utilizing functional components and hooks internally.
 
 ## Install
 
 ```bash
-yarn add react-diff-viewer
+yarn add @alexbruf/react-diff-viewer
 
 # or
 
-npm i react-diff-viewer
+npm i @alexbruf/react-diff-viewer
 ```
 
 ## Usage
 
 ```javascript
 import React from 'react';
-import ReactDiffViewer from 'react-diff-viewer';
+import ReactDiffViewer from '@alexbruf/react-diff-viewer';
 
 const oldCode = `
 const a = 10
@@ -70,7 +67,7 @@ export default App;
 | newValue                  | `string`        | `''`                           | New value as string.                                                                                                                                                                                                                                                                                                                                                                                             |
 | splitView                 | `boolean`       | `true`                         | Switch between `unified` and `split` view.                                                                                                                                                                                                                                                                                                                                                                       |
 | disableWordDiff           | `boolean`       | `false`                        | Show and hide word diff in a diff line.                                                                                                                                                                                                                                                                                                                                                                          |
-| compareMethod             | `DiffMethod`    | `DiffMethod.CHARS`             | JsDiff text diff method used for diffing strings. Check out the [guide](https://github.com/praneshr/react-diff-viewer/tree/v3.0.0#text-block-diff-comparison) to use different methods.                                                                                                                                                                                                                          |
+| compareMethod             | `DiffMethod`    | `DiffMethod.CHARS`             | JsDiff text diff method used for diffing strings. Check out the [guide](https://github.com/alexbruf/react-diff-viewer/tree/master#text-block-diff-comparison) to use different methods.                                                                                                                                                                                                                          |
 | hideLineNumbers           | `boolean`       | `false`                        | Show and hide line numbers.                                                                                                                                                                                                                                                                                                                                                                                      |
 | renderContent             | `function`      | `undefined`                    | Render Prop API to render code in the diff viewer. Helpful for [syntax highlighting](#syntax-highlighting)                                                                                                                                                                                                                                                                                                       |
 | onLineNumberClick         | `function`      | `undefined`                    | Event handler for line number click. `(lineId: string) => void`                                                                                                                                                                                                                                                                                                                                                  |
@@ -106,7 +103,7 @@ An example using [Prism JS](https://prismjs.com)
 
 ```javascript
 import React, { useCallback } from 'react';
-import ReactDiffViewer from 'react-diff-viewer';
+import ReactDiffViewer from '@alexbruf/react-diff-viewer';
 
 const oldCode = `
 const a = 10
@@ -174,7 +171,7 @@ enum DiffMethod {
 
 ```javascript
 import React from 'react';
-import ReactDiffViewer, { DiffMethod } from 'react-diff-viewer';
+import ReactDiffViewer, { DiffMethod } from '@alexbruf/react-diff-viewer';
 
 const oldCode = `
 {
@@ -298,7 +295,7 @@ For keys other than `variables`, the value can either be an object or string int
 
 ```javascript
 import React, { useCallback } from 'react';
-import ReactDiffViewer from 'react-diff-viewer';
+import ReactDiffViewer from '@alexbruf/react-diff-viewer';
 
 const oldCode = `
 const a = 10
