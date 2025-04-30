@@ -2,8 +2,8 @@
   "compilerOptions": {
     "experimentalDecorators": true,
     "jsx": "react",
-    "module": "es6",
-    "moduleResolution": "node",
+    "module": "esnext",
+    "moduleResolution": "bundler",
     "noImplicitAny": true,
     "target": "es5",
     "downlevelIteration": true,

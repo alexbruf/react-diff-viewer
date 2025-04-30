@@ -1,9 +1,9 @@
 import { shallow, configure } from 'enzyme';
 import Adapter from '@cfaester/enzyme-adapter-react-18';
-import * as React from 'react';
-import * as expect from 'expect';
+import React from 'react';
+import expect from 'expect';
 
-import DiffViewer from '../lib/index';
+import DiffViewer from '../dist/cjs/index';
 
 configure({ adapter: new Adapter() })
 

@@ -1,5 +1,5 @@
-import * as expect from 'expect';
-import { computeLineInformation, DiffMethod } from '../lib/compute-lines';
+import expect from 'expect';
+import { computeLineInformation, DiffMethod } from '../dist/cjs/compute-lines';
 
 describe('Testing compute lines utils', (): void => {
   it('Should it avoid trailing spaces', (): void => {

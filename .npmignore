@@ -2,3 +2,7 @@ examples
 test
 *.svg
 src
+enzyme.ts
+index.html
+*.config.js
+!dist

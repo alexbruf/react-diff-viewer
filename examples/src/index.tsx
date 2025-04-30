@@ -1,14 +1,12 @@
 import './style.scss';
-import * as React from 'react';
+import React from 'react';
 import { useState, useCallback } from 'react';
 import { createRoot } from 'react-dom/client'; // Import createRoot
 
-import ReactDiff, { DiffMethod } from '../../lib/index';
-
-const oldJs = require('./diff/javascript/old.rjs').default;
-const newJs = require('./diff/javascript/new.rjs').default;
-
-const logo = require('./image.png');
+import ReactDiff, { DiffMethod } from '../../dist/esm/index';
+import oldJs from './diff/javascript/old.rjs?raw';
+import newJs from './diff/javascript/new.rjs?raw';
+import logo from './image.png'
 
 // PrismJS for syntax highlighting (assuming it's loaded globally or via other means)
 const P = (window as any).Prism;
@@ -70,7 +68,7 @@ const Example: React.FC = () => {
 					Featuring split view, inline view, word diff, line highlight and more.
 				</p>
 				<div className="cta">
-					<a href="https://github.com/praneshr/react-diff-viewer#install">
+					<a href="https://github.com/alexbruf/react-diff-viewer#install">
 						<button type="button" className="btn btn-primary btn-lg">
 							Documentation
 						</button>
@@ -101,7 +99,7 @@ const Example: React.FC = () => {
 };
 
 // Use createRoot API for React 18+
-const container = document.getElementById('app');
+const container = document.getElementById('root');
 if (container) {
 	const root = createRoot(container);
 	root.render(<Example />);

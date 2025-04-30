@@ -1,0 +1,197 @@
+// Base container styles
+.diff-container {
+  width: 100%;
+  border-collapse: collapse;
+
+  pre {
+    margin: 0;
+    white-space: pre-wrap;
+    line-height: 25px;
+  }
+
+  // CSS Variables for Light Theme
+  &.light-theme {
+    --diffViewerBackground: #fff;
+    --diffViewerColor: #212529;
+    --addedBackground: #e6ffed;
+    --addedColor: #24292e;
+    --removedBackground: #ffeef0;
+    --removedColor: #24292e;
+    --wordAddedBackground: #acf2bd;
+    --wordRemovedBackground: #fdb8c0;
+    --addedGutterBackground: #cdffd8;
+    --removedGutterBackground: #ffdce0;
+    --gutterBackground: #f7f7f7;
+    --gutterBackgroundDark: #f3f1f1;
+    --highlightBackground: #fffbdd;
+    --highlightGutterBackground: #fff5b1;
+    --codeFoldGutterBackground: #dbedff;
+    --codeFoldBackground: #f1f8ff;
+    --emptyLineBackground: #fafbfc;
+    --gutterColor: #212529;
+    --addedGutterColor: #212529;
+    --removedGutterColor: #212529;
+    --codeFoldContentColor: #212529;
+    --diffViewerTitleBackground: #fafbfc;
+    --diffViewerTitleColor: #212529;
+    --diffViewerTitleBorderColor: #eee;
+  }
+
+  // CSS Variables for Dark Theme
+  &.dark-theme {
+    --diffViewerBackground: #2e303c;
+    --diffViewerColor: #FFF;
+    --addedBackground: #044B53;
+    --addedColor: white;
+    --removedBackground: #632F34;
+    --removedColor: white;
+    --wordAddedBackground: #055d67;
+    --wordRemovedBackground: #7d383f;
+    --addedGutterBackground: #034148;
+    --removedGutterBackground: #632b30;
+    --gutterBackground: #2c2f3a;
+    --gutterBackgroundDark: #262933;
+    --highlightBackground: #2a3967;
+    --highlightGutterBackground: #2d4077;
+    --codeFoldGutterBackground: #21232b;
+    --codeFoldBackground: #262831;
+    --emptyLineBackground: #363946;
+    --gutterColor: #464c67;
+    --addedGutterColor: #8c8c8c;
+    --removedGutterColor: #8c8c8c;
+    --codeFoldContentColor: #555a7b;
+    --diffViewerTitleBackground: #2f323e;
+    --diffViewerTitleColor: #555a7b;
+    --diffViewerTitleBorderColor: #353846;
+  }
+
+  // Apply styles using CSS Variables
+  background: var(--diffViewerBackground);
+  color: var(--diffViewerColor);
+
+  .gutter {
+    background-color: var(--gutterBackground);
+    &:hover { background-color: var(--gutterBackgroundDark); }
+  }
+  .diff-added {
+    background-color: var(--addedBackground);
+    color: var(--addedColor);
+    pre { color: var(--addedColor); }
+  }
+  .diff-removed {
+    background-color: var(--removedBackground);
+    color: var(--removedColor);
+    pre { color: var(--removedColor); }
+  }
+  .gutter.diff-added {
+    background-color: var(--addedGutterBackground);
+    .line-number { color: var(--addedGutterColor); }
+  }
+  .gutter.diff-removed {
+    background-color: var(--removedGutterBackground);
+    .line-number { color: var(--removedGutterColor); }
+  }
+  .line-number { color: var(--gutterColor); }
+  .word-diff.word-added { background-color: var(--wordAddedBackground); }
+  .word-diff.word-removed { background-color: var(--wordRemovedBackground); }
+  .highlighted-line { background-color: var(--highlightBackground); }
+  .highlighted-gutter { background-color: var(--highlightGutterBackground) !important; } // Use !important to override hover
+  .code-fold-gutter { background-color: var(--codeFoldGutterBackground); }
+  .code-fold {
+    background-color: var(--codeFoldBackground);
+    .code-fold-content { color: var(--codeFoldContentColor); }
+  }
+  .empty-line { background-color: var(--emptyLineBackground); }
+  .title-block {
+    background-color: var(--diffViewerTitleBackground);
+    border-bottom-color: var(--diffViewerTitleBorderColor);
+    .content-text { color: var(--diffViewerTitleColor); }
+    &:last-child { border-left-color: var(--diffViewerTitleBorderColor); }
+  }
+
+  // Common structural styles (no theme variables)
+  .line {
+    vertical-align: baseline;
+  }
+
+  .content {
+    width: 100%; // Takes full width in inline view
+  }
+
+  .split-view {
+    .content {
+      width: 50%; // Takes half width in split view
+    }
+  }
+
+  .gutter {
+    user-select: none;
+    min-width: 50px;
+    padding: 0 10px;
+    text-align: right;
+
+    &:hover {
+      cursor: pointer;
+      pre {
+        opacity: 1;
+      }
+    }
+
+    pre {
+      opacity: 0.5;
+    }
+  }
+
+  .empty-gutter {
+    .gutter:hover {
+      background: inherit; // Use theme-specific background
+      cursor: initial;
+    }
+  }
+
+  .marker {
+    width: 25px;
+    padding-left: 10px;
+    padding-right: 10px;
+    user-select: none;
+  }
+
+  .word-diff {
+    padding: 2px;
+    display: inline-flex;
+    border-radius: 1px;
+  }
+
+  .code-fold {
+    height: 40px;
+    font-size: 14px;
+    font-weight: 700;
+
+    a {
+      text-decoration: underline !important;
+      cursor: pointer;
+      pre {
+        display: inline;
+      }
+    }
+  }
+
+  .title-block {
+    padding: 10px;
+    border-bottom: 1px solid; // Border color set by theme variable
+
+    &:last-child {
+      border-left: 1px solid; // Border color set by theme variable
+    }
+  }
+
+  // Ensure highlighted lines don't override word diff backgrounds
+  .highlighted-line {
+    .word-diff.word-added {
+      background-color: var(--wordAddedBackground); // Use CSS variable
+    }
+    .word-diff.word-removed {
+      background-color: var(--wordRemovedBackground); // Use CSS variable
+    }
+  }
+}

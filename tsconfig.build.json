@@ -11,11 +11,8 @@
     "types": [
       "mocha",
       "node",
-      "jest",
-      "vite",
-      "@testing-library/react"
     ]
   },
-  "include": ["./src/*", "enzyme.ts", "__tests__/**/*"],
-  "exclude": ["node_modules"],
+  "include": ["./src/*"],
+  "exclude": ["node_modules", "__tests__/**/*", "examples/**/*", "enzyme.ts"],
 }

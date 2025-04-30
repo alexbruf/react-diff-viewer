@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import cn from 'classnames';
 
 import {
@@ -9,10 +9,8 @@ import {
 	DiffType,
 	DiffMethod,
 } from './compute-lines';
-import computeStyles, {
-	ReactDiffViewerStylesOverride,
-	ReactDiffViewerStyles,
-} from './styles';
+// Import SCSS styles
+import './styles.css';
 
 export enum LineNumberPrefix {
 	LEFT = 'L',
@@ -53,8 +51,6 @@ export interface ReactDiffViewerProps {
 	) => void;
 	// Array of line ids to highlight lines.
 	highlightLines?: string[];
-	// Style overrides.
-	styles?: ReactDiffViewerStylesOverride;
 	// Use dark theme.
 	useDarkTheme?: boolean;
 	// Title for left column
@@ -78,19 +74,12 @@ const DiffViewer: React.FC<ReactDiffViewerProps> = ({
 	codeFoldMessageRenderer,
 	onLineNumberClick,
 	highlightLines = [],
-	styles: stylesOverride = {},
 	useDarkTheme = false,
 	leftTitle,
 	rightTitle,
 }) => {
 	// Use useState for managing expanded blocks
 	const [expandedBlocks, setExpandedBlocks] = useState<number[]>([]);
-
-	// Use useMemo for computing styles
-	const styles: ReactDiffViewerStyles = useMemo(
-		() => computeStyles(stylesOverride, useDarkTheme),
-		[stylesOverride, useDarkTheme],
-	);
 
 	// Use useCallback for expanding blocks
 	const onBlockExpand = useCallback(
@@ -121,9 +110,9 @@ const DiffViewer: React.FC<ReactDiffViewerProps> = ({
 					return (
 						<span
 							key={i}
-							className={cn(styles.wordDiff, {
-								[styles.wordAdded]: wordDiff.type === DiffType.ADDED,
-								[styles.wordRemoved]: wordDiff.type === DiffType.REMOVED,
+							className={cn('word-diff', {
+								'word-added': wordDiff.type === DiffType.ADDED,
+								'word-removed': wordDiff.type === DiffType.REMOVED,
 							})}>
 							{/* Use renderer if provided, otherwise render the value directly */}
 							{renderer ? renderer(wordDiff.value as string) : `${wordDiff.value}`}
@@ -132,7 +121,7 @@ const DiffViewer: React.FC<ReactDiffViewerProps> = ({
 				},
 			);
 		},
-		[styles.wordDiff, styles.wordAdded, styles.wordRemoved], // Dependency array includes styles
+		[renderContent], // Removed styles from dependencies
 	);
 
 	// Use useCallback for rendering a single line
@@ -171,13 +160,13 @@ const DiffViewer: React.FC<ReactDiffViewerProps> = ({
 									? onLineNumberClickProxy(lineNumberTemplate)
 									: undefined
 							}
-							className={cn(styles.gutter, {
-								[styles.emptyGutter]: !lineNumber,
-								[styles.diffAdded]: added,
-								[styles.diffRemoved]: removed,
-								[styles.highlightedGutter]: highlightLine,
+							className={cn('gutter', {
+								'empty-gutter': !lineNumber,
+								'diff-added': added,
+								'diff-removed': removed,
+								'highlighted-gutter': highlightLine,
 							})}>
-							<pre className={styles.lineNumber}>{lineNumber}</pre>
+							<pre className={'line-number'}>{lineNumber}</pre>
 						</td>
 					)}
 					{!splitView && !hideLineNumbers && (
@@ -187,21 +176,21 @@ const DiffViewer: React.FC<ReactDiffViewerProps> = ({
 									? onLineNumberClickProxy(additionalLineNumberTemplate)
 									: undefined
 							}
-							className={cn(styles.gutter, {
-								[styles.emptyGutter]: !additionalLineNumber,
-								[styles.diffAdded]: added,
-								[styles.diffRemoved]: removed,
-								[styles.highlightedGutter]: highlightLine,
+							className={cn('gutter', {
+								'empty-gutter': !additionalLineNumber,
+								'diff-added': added,
+								'diff-removed': removed,
+								'highlighted-gutter': highlightLine,
 							})}>
-							<pre className={styles.lineNumber}>{additionalLineNumber}</pre>
+							<pre className={'line-number'}>{additionalLineNumber}</pre>
 						</td>
 					)}
 					<td
-						className={cn(styles.marker, {
-							[styles.emptyLine]: !content,
-							[styles.diffAdded]: added,
-							[styles.diffRemoved]: removed,
-							[styles.highlightedLine]: highlightLine,
+						className={cn('marker', {
+							'empty-line': !content,
+							'diff-added': added,
+							'diff-removed': removed,
+							'highlighted-line': highlightLine,
 						})}>
 						<pre>
 							{added && '+'}
@@ -209,13 +198,13 @@ const DiffViewer: React.FC<ReactDiffViewerProps> = ({
 						</pre>
 					</td>
 					<td
-						className={cn(styles.content, {
-							[styles.emptyLine]: !content,
-							[styles.diffAdded]: added,
-							[styles.diffRemoved]: removed,
-							[styles.highlightedLine]: highlightLine,
+						className={cn('content', {
+							'empty-line': !content,
+							'diff-added': added,
+							'diff-removed': removed,
+							'highlighted-line': highlightLine,
 						})}>
-						<pre className={styles.contentText}>{content}</pre>
+						<pre className={'content-text'}>{content}</pre>
 					</td>
 				</React.Fragment>
 			);
@@ -227,25 +216,14 @@ const DiffViewer: React.FC<ReactDiffViewerProps> = ({
 			renderWordDiff,
 			renderContent,
 			onLineNumberClickProxy,
-			styles.gutter,
-			styles.emptyGutter,
-			styles.diffAdded,
-			styles.diffRemoved,
-			styles.highlightedGutter,
-			styles.lineNumber,
-			styles.marker,
-			styles.emptyLine,
-			styles.highlightedLine,
-			styles.content,
-			styles.contentText,
-		], // Extensive dependency array for renderLine
+		], // Removed styles from dependencies
 	);
 
 	// Use useCallback for rendering split view lines
 	const renderSplitView = useCallback(
 		({ left, right }: LineInformation, index: number): JSX.Element => {
 			return (
-				<tr key={index} className={styles.line}>
+				<tr key={index} className={'line'}>
 					{renderLine(
 						left.lineNumber,
 						left.type,
@@ -261,7 +239,7 @@ const DiffViewer: React.FC<ReactDiffViewerProps> = ({
 				</tr>
 			);
 		},
-		[renderLine, styles.line], // Dependency array includes renderLine and styles.line
+		[renderLine], // Removed styles from dependencies
 	);
 
 	// Use useCallback for rendering inline view lines
@@ -271,7 +249,7 @@ const DiffViewer: React.FC<ReactDiffViewerProps> = ({
 			if (left.type === DiffType.REMOVED && right.type === DiffType.ADDED) {
 				return (
 					<React.Fragment key={index}>
-						<tr className={styles.line}>
+						<tr className={'line'}>
 							{renderLine(
 								left.lineNumber,
 								left.type,
@@ -280,7 +258,7 @@ const DiffViewer: React.FC<ReactDiffViewerProps> = ({
 								null, // No additional line number for removed line
 							)}
 						</tr>
-						<tr className={styles.line}>
+						<tr className={'line'}>
 							{renderLine(
 								null, // No line number for added line gutter
 								right.type,
@@ -322,12 +300,12 @@ const DiffViewer: React.FC<ReactDiffViewerProps> = ({
 			}
 
 			return (
-				<tr key={index} className={styles.line}>
+				<tr key={index} className={'line'}>
 					{content}
 				</tr>
 			);
 		},
-		[renderLine, styles.line], // Dependency array includes renderLine and styles.line
+		[renderLine], // Removed styles from dependencies
 	);
 
 	// Use useCallback for the block click proxy
@@ -351,7 +329,7 @@ const DiffViewer: React.FC<ReactDiffViewerProps> = ({
 					rightBlockLineNumber,
 				)
 			) : (
-				<pre className={styles.codeFoldContent}>Expand {num} lines ...</pre>
+				<pre className={'code-fold-content'}>Expand {num} lines ...</pre>
 			);
 			const content = (
 				<td>
@@ -364,11 +342,11 @@ const DiffViewer: React.FC<ReactDiffViewerProps> = ({
 			return (
 				<tr
 					key={`${leftBlockLineNumber}-${rightBlockLineNumber}`}
-					className={styles.codeFold}>
-					{!hideLineNumbers && <td className={styles.codeFoldGutter} />}
+					className={'code-fold'}>
+					{!hideLineNumbers && <td className={'code-fold-gutter'} />}
 					<td
 						className={cn({
-							[styles.codeFoldGutter]: isUnifiedViewWithoutLineNumbers,
+							'code-fold-gutter': isUnifiedViewWithoutLineNumbers,
 						})}
 					/>
 
@@ -395,10 +373,7 @@ const DiffViewer: React.FC<ReactDiffViewerProps> = ({
 			splitView,
 			codeFoldMessageRenderer,
 			onBlockClickProxy,
-			styles.codeFoldContent,
-			styles.codeFold,
-			styles.codeFoldGutter,
-		], // Dependency array
+		], // Removed styles from dependencies
 	);
 
 	// Use useCallback for rendering the main diff view
@@ -504,37 +479,54 @@ const DiffViewer: React.FC<ReactDiffViewerProps> = ({
 		renderInlineView,
 	]);
 
-	// Compute title and colSpans based on props
-	const colSpanOnSplitView = hideLineNumbers ? 2 : 3;
-	const colSpanOnInlineView = hideLineNumbers ? 2 : 4;
+	// Compute final diff lines
+	const diffNodes = renderDiff();
+
+	// Prepare title block if titles are provided
 	const title = (leftTitle || rightTitle) && (
 		<tr>
-			<td
-				colSpan={splitView ? colSpanOnSplitView : colSpanOnInlineView}
-				className={styles.titleBlock}>
-				<pre className={styles.contentText}>{leftTitle}</pre>
+			{!hideLineNumbers && <td className={'title-block'} />}
+			<td colSpan={hideLineNumbers || !splitView ? 1 : 2} className={'title-block'}>
+				<pre className={'content-text'}>{leftTitle}</pre>
 			</td>
 			{splitView && (
-				<td colSpan={colSpanOnSplitView} className={styles.titleBlock}>
-					<pre className={styles.contentText}>{rightTitle}</pre>
-				</td>
+				<React.Fragment>
+					{!hideLineNumbers && <td className={'title-block'} />}
+					<td colSpan={hideLineNumbers ? 1 : 2} className={'title-block'}>
+						<pre className={'content-text'}>{rightTitle}</pre>
+					</td>
+				</React.Fragment>
 			)}
 		</tr>
 	);
 
+
 	return (
 		<table
-			className={cn(styles.diffContainer, {
-				[styles.splitView]: splitView,
+			className={cn('diff-container', {
+				'split-view': splitView,
+				'light-theme': !useDarkTheme,
+				'dark-theme': useDarkTheme,
 			})}>
-			<tbody>
-				{title}
-				{renderDiff()}
-			</tbody>
+			{title}
+			<tbody>{diffNodes}</tbody>
 		</table>
 	);
 };
 
-// Export the component and types
+// Set default props for the functional component
+DiffViewer.defaultProps = {
+	splitView: true,
+	linesOffset: 0,
+	disableWordDiff: false,
+	compareMethod: DiffMethod.CHARS,
+	extraLinesSurroundingDiff: 3,
+	hideLineNumbers: false,
+	showDiffOnly: true,
+	highlightLines: [],
+	// styles prop removed
+	useDarkTheme: false,
+};
+
 export default DiffViewer;
-export { ReactDiffViewerStylesOverride, DiffMethod };
+export { DiffMethod }; // Keep DiffMethod export
